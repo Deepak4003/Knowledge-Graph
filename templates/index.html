@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Graph DB Studio</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c14;--panel:#0d1220;--card:#111827;--border:#1e2d45;
+  --accent:#00e5b8;--accent2:#818cf8;--warn:#fbbf24;--red:#f87171;--green:#34d399;
+  --text:#e2e8f0;--muted:#4b6080;--node-default:#818cf8;
+  --glow:0 0 20px #00e5b820;--glow2:0 0 20px #818cf820;
+  --radius:12px;--radius-sm:8px;
+}
+:root.light{
+  --bg:#f1f5fb;--panel:#ffffff;--card:#e8eef8;--border:#c8d6ea;
+  --accent:#00a884;--accent2:#6366f1;--warn:#d97706;--red:#dc2626;--green:#16a34a;
+  --text:#0f172a;--muted:#64748b;--node-default:#6366f1;
+  --glow:0 0 20px #00a88420;--glow2:0 0 20px #6366f120;
+}
+html,body{height:100%;overflow:hidden;font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+body{display:flex;flex-direction:column}
+
+/* HEADER */
+header{
+  flex-shrink:0;height:48px;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:10px;
+}
+.logo{font-size:.95rem;font-weight:700;color:var(--accent);letter-spacing:.5px;white-space:nowrap}
+.logo span{color:var(--accent2)}
+.hdr-sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.hdr-stat{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.hdr-stat b{color:var(--text)}
+.spacer{flex:1}
+.hdr-btn{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  padding:4px 10px;border-radius:6px;font-size:.72rem;cursor:pointer;transition:all .2s;
+  white-space:nowrap;flex-shrink:0;
+}
+.hdr-btn:hover{border-color:var(--accent);color:var(--accent)}
+.hdr-btn.danger:hover{border-color:var(--red);color:var(--red)}
+.hdr-btn.theme-btn{border-color:var(--accent);color:var(--accent)}
+
+/* WORKSPACE */
+.workspace{flex:1;display:flex;overflow:hidden;min-height:0}
+
+/* LEFT SIDEBAR */
+.sidebar{
+  width:340px;flex-shrink:0;background:var(--panel);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{
+  flex:1;padding:10px 0;text-align:center;font-size:.85rem;
+  cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.5px;line-height:1}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-pane{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+.tab-pane.active{display:flex}
+.pane-scroll{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.pane-scroll::-webkit-scrollbar{width:3px}
+.pane-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* FORM ELEMENTS */
+.field-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px}
+.inp{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  border-radius:7px;padding:7px 10px;font-size:.8rem;color:var(--text);outline:none;
+}
+.inp:focus{border-color:var(--accent)}
+.inp::placeholder{color:var(--muted)}
+select.inp option{background:var(--card)}
+.btn{
+  padding:8px 14px;border:none;border-radius:7px;
+  font-size:.78rem;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.btn-accent{background:var(--accent);color:#0f1117}
+.btn-accent:hover{background:#00b894}
+.btn-accent2{background:var(--accent2);color:#fff}
+.btn-accent2:hover{background:#5c63d8}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-danger:hover{border-color:var(--red);color:var(--red)}
+.btn-full{width:100%}
+.btn-sm{padding:5px 10px;font-size:.72rem}
+.btn-row{display:flex;gap:7px}
+
+/* CARD */
+.card{background:var(--card);border-radius:9px;padding:13px;border:1px solid var(--border)}
+.card-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px}
+
+/* NODE LIST */
+.node-list{display:flex;flex-direction:column;gap:5px}
+.node-item{
+  background:var(--bg);border:1px solid var(--border);border-radius:7px;
+  padding:8px 10px;cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:8px;
+}
+.node-item:hover{border-color:var(--accent)}
+.node-item.selected{border-color:var(--accent);background:var(--card)}
+.node-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.node-name{font-size:.78rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node-type{font-size:.65rem;color:var(--muted);background:var(--card);padding:1px 6px;border-radius:4px}
+
+/* QUERY BAR */
+.query-wrap{
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  display:flex;align-items:center;gap:8px;padding:6px 10px;
+}
+.query-wrap input{
+  flex:1;background:none;border:none;outline:none;
+  font-size:.82rem;color:var(--text);font-family:monospace;
+}
+.query-wrap input::placeholder{color:var(--muted)}
+
+/* GRAPH AREA */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;position:relative}
+#graph-wrap{flex:1;position:relative;background:var(--bg);min-height:0}
+#network{position:absolute;top:0;left:0;right:0;bottom:0}
+
+/* placeholder */
+.ph{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:10px;pointer-events:none;
+}
+.ph-icon{font-size:5rem;opacity:.07}
+.ph-text{font-size:.82rem;color:var(--muted);opacity:.4;text-align:center;max-width:280px;line-height:1.6}
+
+/* loading */
+#loading{
+  display:none;position:absolute;inset:0;background:#0f111799;
+  z-index:30;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+}
+#loading.show{display:flex}
+.spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{color:var(--accent);font-size:.82rem}
+
+/* TOOLBAR */
+.toolbar{
+  flex-shrink:0;height:38px;background:var(--panel);border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 12px;gap:10px;font-size:.73rem;color:var(--muted);
+}
+.toolbar select{
+  background:var(--card);color:var(--text);border:1px solid var(--border);
+  padding:2px 7px;border-radius:5px;font-size:.73rem;outline:none;
+}
+
+/* RIGHT DETAIL PANEL */
+.detail{
+  width:260px;flex-shrink:0;background:var(--panel);
+  border-left:1px solid var(--border);display:none;flex-direction:column;overflow:hidden;
+}
+.detail.open{display:flex}
+.detail-head{
+  padding:11px 13px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.detail-head .dh-title{font-size:.85rem;font-weight:600;color:var(--accent)}
+.detail-head button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem}
+.detail-body{flex:1;overflow-y:auto;padding:12px 13px;display:flex;flex-direction:column;gap:10px}
+.d-sec{font-size:.67rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+.d-val{font-size:.78rem;color:var(--text);word-break:break-word}
+.d-prop-row{display:flex;justify-content:space-between;font-size:.74rem;padding:3px 0;border-bottom:1px solid var(--border)}
+.d-prop-row .pk{color:var(--muted)}.d-prop-row .pv{color:var(--text)}
+.d-rel-row{font-size:.73rem;padding:4px 0;border-bottom:1px solid var(--border);line-height:1.5}
+.d-rel-row .rs{color:var(--accent2)}.d-rel-row .rr{color:var(--warn);font-style:italic}.d-rel-row .ro{color:var(--accent)}
+.edit-inp{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  border-radius:5px;padding:5px 8px;font-size:.76rem;color:var(--text);outline:none;margin-top:3px;
+}
+.edit-inp:focus{border-color:var(--accent)}
+
+/* UPLOAD ZONE */
+.upload-zone{
+  border:2px dashed var(--border);border-radius:9px;
+  padding:22px 14px;text-align:center;cursor:pointer;transition:all .2s;
+}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:#00d4aa0a}
+.upload-zone input{display:none}
+.uz-icon{font-size:2rem;margin-bottom:6px}
+.uz-label{font-size:.78rem;color:var(--muted)}
+.uz-file{font-size:.72rem;color:var(--accent);margin-top:4px;word-break:break-all}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:18px;right:18px;z-index:9999;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:9px 16px;font-size:.76rem;
+  display:none;box-shadow:0 4px 24px #00000088;max-width:300px;
+}
+#toast.show{display:block}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--red);color:var(--red)}
+
+/* CONTEXT MENU */
+#ctx-menu{
+  display:none;position:fixed;background:var(--card);
+  border:1px solid var(--border);border-radius:8px;
+  padding:5px 0;z-index:500;min-width:160px;
+  box-shadow:0 4px 20px #00000088;
+}
+#ctx-menu.show{display:block}
+.ctx-item{
+  padding:7px 14px;font-size:.78rem;cursor:pointer;color:var(--text);transition:background .15s;
+}
+.ctx-item:hover{background:var(--border)}
+.ctx-item.danger{color:var(--red)}
+.ctx-sep{height:1px;background:var(--border);margin:4px 0}
+
+/* OWL chips */
+.owl-chip{
+  background:var(--card);border:1px solid var(--border);border-radius:5px;
+  padding:2px 9px;font-size:.68rem;color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.owl-chip:hover{border-color:var(--accent);color:var(--accent)}
+
+/* TYPE COLORS */
+.type-Person{color:#f472b6}.type-Organization{color:#818cf8}
+.type-Location{color:#34d399}.type-Concept{color:#c084fc}
+.type-Event{color:#fb923c}.type-Date{color:#fbbf24}
+.type-Product{color:#4ade80}.type-Group{color:#f97316}
+.type-Node{color:#00e5b8}
+
+/* ── POLISH ── */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+@keyframes slideIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+header{box-shadow:0 2px 24px #00000050;background:linear-gradient(90deg,var(--panel),#0d1628) !important}
+.logo{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1rem !important}
+.hdr-btn:hover{box-shadow:var(--glow)}
+.hdr-btn.theme-btn{border-color:var(--accent2) !important;color:var(--accent2) !important}
+.tabs{background:var(--bg) !important}
+.tab:hover{color:var(--text);background:var(--panel)}
+.inp:focus{box-shadow:0 0 0 3px #00e5b815}
+.card{border-radius:12px !important}
+.node-dot{box-shadow:0 0 6px currentColor}
+.node-item:hover{transform:translateX(2px)}
+.node-type{border-radius:20px !important;background:var(--panel) !important}
+#graph-wrap::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle,var(--border) 1px,transparent 1px);background-size:32px 32px;opacity:.35}
+#loading{backdrop-filter:blur(4px);background:linear-gradient(135deg,#080c14ee,#0d122088) !important}
+.detail-head{background:linear-gradient(135deg,var(--card),var(--panel)) !important}
+.detail-head button:hover{color:var(--red)}
+.upload-zone:hover,.upload-zone.drag{background:linear-gradient(135deg,#00e5b808,#818cf808) !important;box-shadow:var(--glow)}
+.owl-chip{border-radius:20px !important}
+.owl-chip:hover{box-shadow:var(--glow)}
+#toast.show{animation:slideIn .3s ease}
+#toast.ok{background:linear-gradient(135deg,var(--card),#34d39910) !important}
+#toast.err{background:linear-gradient(135deg,var(--card),#f8717110) !important}
+#ctx-menu{backdrop-filter:blur(8px);border-radius:12px !important}
+#ctx-menu.show{animation:slideIn .15s ease}
+.btn-accent{background:linear-gradient(135deg,var(--accent),#00b894) !important;color:#080c14 !important}
+.btn-accent:hover{transform:translateY(-1px);box-shadow:var(--glow)}
+.btn-accent2{background:linear-gradient(135deg,var(--accent2),#6366f1) !important;color:#fff !important}
+.btn-accent2:hover{transform:translateY(-1px);box-shadow:var(--glow2)}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">Graph<span>DB</span> Studio</span>
+  <div class="hdr-sep"></div>
+  <span class="hdr-stat">Nodes: <b id="h-nodes">0</b></span>
+  <span class="hdr-stat">Relationships: <b id="h-edges">0</b></span>
+  <span class="spacer"></span>
+  <button class="hdr-btn" onclick="exportJSON()">⬇ Export</button>
+  <button class="hdr-btn theme-btn" id="theme-btn" onclick="toggleTheme()">☀ Light</button>
+  <button class="hdr-btn danger" onclick="clearAll()">🗑 Clear</button>
+</header>
+
+<div class="workspace">
+
+  <!-- ══ SIDEBAR ══ -->
+  <div class="sidebar">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('create')" title="Create Nodes & Edges">＋<span class="tab-label">Create</span></div>
+      <div class="tab" onclick="switchTab('nodes')" title="Browse Nodes">◉<span class="tab-label">Nodes</span></div>
+      <div class="tab" onclick="switchTab('query')" title="Cypher Query">⌕<span class="tab-label">Query</span></div>
+      <div class="tab" onclick="switchTab('ask')" title="Ask AI">🤖<span class="tab-label">AI</span></div>
+      <div class="tab" onclick="switchTab('pdf')" title="Import PDF">📄<span class="tab-label">PDF</span></div>
+      <div class="tab" onclick="switchTab('owl')" title="OWL Editor">🦉<span class="tab-label">OWL</span></div>
+    </div>
+
+    <!-- CREATE TAB -->
+    <div class="tab-pane active" id="tab-create">
+      <div class="pane-scroll">
+
+        <div class="card">
+          <div class="card-title">Add Node</div>
+          <div class="field-label">Label</div>
+          <input class="inp" id="n-label" placeholder="e.g. Albert Einstein" style="margin-bottom:8px"/>
+          <div class="field-label">Type</div>
+          <select class="inp" id="n-type" style="margin-bottom:8px">
+            <option>Person</option><option>Organization</option>
+            <option>Location</option><option>Concept</option>
+            <option>Event</option><option>Date</option>
+            <option>Product</option><option>Group</option>
+            <option>Node</option>
+          </select>
+          <div class="field-label">Properties (key:value, one per line)</div>
+          <textarea class="inp" id="n-props" rows="3" placeholder="born: 1879&#10;field: Physics" style="resize:vertical;margin-bottom:8px"></textarea>
+          <button class="btn btn-accent btn-full" onclick="addNode()">＋ Create Node</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Add Relationship</div>
+          <div class="field-label">From Node</div>
+          <input class="inp" id="e-from" placeholder="Type or click a node…" style="margin-bottom:8px" list="node-datalist"/>
+          <div class="field-label">Relationship Type</div>
+          <input class="inp" id="e-rel" placeholder="e.g. WORKS_AT, KNOWS, PART_OF" style="margin-bottom:8px"/>
+          <div class="field-label">To Node</div>
+          <input class="inp" id="e-to" placeholder="Type or click a node…" style="margin-bottom:8px" list="node-datalist"/>
+          <button class="btn btn-accent2 btn-full" onclick="addEdge()">→ Create Relationship</button>
+          <datalist id="node-datalist"></datalist>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- NODES TAB -->
+    <div class="tab-pane" id="tab-nodes">
+      <div class="pane-scroll">
+        <input class="inp" id="node-search" placeholder="Search nodes…" oninput="filterNodes()"/>
+        <div class="node-list" id="node-list"></div>
+      </div>
+    </div>
+
+    <!-- QUERY TAB -->
+    <div class="tab-pane" id="tab-query">
+      <div class="pane-scroll">
+        <div class="card">
+          <div class="card-title">Query Engine</div>
+          <textarea id="q-input"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
+                   padding:9px;font-family:'Cascadia Code','Fira Code',monospace;font-size:.76rem;
+                   color:#a8d8a8;line-height:1.6;resize:vertical;min-height:80px;outline:none;margin-bottom:8px"
+            placeholder="MATCH (n:Person)&#10;MATCH (n)-[r:DISCOVERED]->(m)&#10;PATH FROM &quot;Einstein&quot; TO &quot;Nobel Prize&quot;&#10;NEIGHBORS &quot;Einstein&quot;&#10;STATS"
+            onkeydown="if(event.ctrlKey&&event.key==='Enter')runQuery()"></textarea>
+          <div style="display:flex;gap:7px;margin-bottom:10px">
+            <button class="btn btn-accent btn-sm" style="flex:1" onclick="runQuery()">▶ Run  <span style="opacity:.6;font-size:.68rem">Ctrl+Enter</span></button>
+            <button class="btn btn-outline btn-sm" onclick="clearQuery()">✕</button>
+          </div>
+          <!-- example chips -->
+          <div style="font-size:.67rem;color:var(--muted);margin-bottom:5px">Examples:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px" id="q-chips"></div>
+        </div>
+        <div id="q-message" style="font-size:.73rem;color:var(--accent);display:none;padding:4px 0"></div>
+        <div id="q-error"   style="font-size:.73rem;color:var(--red);display:none;padding:4px 0"></div>
+        <div id="q-table-wrap" style="display:none;overflow-x:auto">
+          <table id="q-table" style="width:100%;border-collapse:collapse;font-size:.72rem"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI QUERY TAB -->
+    <div class="tab-pane" id="tab-ask">
+      <div class="pane-scroll">
+        <div class="card">
+          <div class="card-title">🤖 Ask AI about your Graph</div>
+          <textarea id="ai-question"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
+                   padding:9px;font-size:.8rem;color:var(--text);line-height:1.6;
+                   resize:vertical;min-height:70px;outline:none;margin-bottom:8px"
+            placeholder="e.g. Who are the key researchers in this paper?&#10;What methods were proposed?&#10;How is BERT related to transformers?"
+            onkeydown="if(event.ctrlKey&&event.key==='Enter')askAI()"></textarea>
+          <button class="btn btn-accent btn-full" onclick="askAI()">
+            🤖 Ask  <span style="opacity:.6;font-size:.68rem">Ctrl+Enter</span>
+          </button>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:2px">
+          <span class="owl-chip" onclick="setAIQ('Who are the main people or researchers mentioned?')">👤 People</span>
+          <span class="owl-chip" onclick="setAIQ('What organizations or institutions are involved?')">🏢 Orgs</span>
+          <span class="owl-chip" onclick="setAIQ('What methods or techniques are proposed?')">⚙️ Methods</span>
+          <span class="owl-chip" onclick="setAIQ('What datasets were used?')">📊 Datasets</span>
+          <span class="owl-chip" onclick="setAIQ('What are the key findings or results?')">🔍 Findings</span>
+          <span class="owl-chip" onclick="setAIQ('What technologies are mentioned?')">💡 Tech</span>
+        </div>
+
+        <div id="ai-loading" style="display:none;text-align:center;padding:16px;color:var(--muted);font-size:.78rem">
+          <div class="spinner" style="margin:0 auto 8px"></div>
+          Thinking…
+        </div>
+
+        <div id="ai-result" style="display:none">
+          <div class="card" style="border-color:var(--accent)">
+            <div style="font-size:.68rem;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px">
+              🤖 AI Answer <span id="ai-confidence" style="margin-left:6px;opacity:.6"></span>
+            </div>
+            <div id="ai-answer" style="font-size:.82rem;color:var(--text);line-height:1.7"></div>
+          </div>
+          <div id="ai-highlight-info" style="font-size:.72rem;color:var(--muted);margin-top:6px;display:none">
+            <span id="ai-highlight-count"></span> relevant nodes highlighted on graph
+            <button class="btn btn-outline btn-sm" style="margin-left:8px;padding:2px 8px" onclick="clearAIHighlight()">Clear</button>
+          </div>
+        </div>
+
+        <div id="ai-error" style="display:none;font-size:.75rem;color:var(--red);padding:8px 0"></div>
+      </div>
+    </div>
+
+    <!-- PDF TAB -->
+    <div class="tab-pane" id="tab-pdf">
+      <div class="pane-scroll">
+
+        <!-- Single PDF -->
+        <div class="card">
+          <div class="card-title">📄 Single PDF</div>
+          <div class="upload-zone" id="upload-zone"
+               ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)"
+               onclick="document.getElementById('pdf-input').click()">
+            <div class="uz-icon">📄</div>
+            <div class="uz-label">Drop a PDF or click to browse</div>
+            <div class="uz-file" id="uz-file"></div>
+            <input type="file" id="pdf-input" accept=".pdf" onchange="onFileSelect(event)"/>
+          </div>
+          <button class="btn btn-accent btn-full" id="pdf-btn" onclick="uploadPDF()" disabled>
+            ⚡ Extract & Import
+          </button>
+          <div id="pdf-result" style="font-size:.75rem;color:var(--muted);display:none;margin-top:6px"></div>
+        </div>
+
+        <!-- Multi PDF Fusion -->
+        <div class="card" style="border-color:var(--accent2)">
+          <div class="card-title" style="color:var(--accent2)">🔀 Multi-PDF Fusion</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">
+            Upload multiple papers — AI merges them into one unified knowledge graph
+          </div>
+
+          <div class="upload-zone" id="multi-upload-zone"
+               ondragover="onMultiDragOver(event)" ondragleave="onMultiDragLeave()" ondrop="onMultiDrop(event)"
+               onclick="document.getElementById('multi-pdf-input').click()"
+               style="border-color:var(--accent2)">
+            <div class="uz-icon">📚</div>
+            <div class="uz-label">Drop multiple PDFs here<br/>or click to select</div>
+            <input type="file" id="multi-pdf-input" accept=".pdf" multiple onchange="onMultiFileSelect(event)"/>
+          </div>
+
+          <!-- file list -->
+          <div id="multi-file-list" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
+
+          <div style="display:flex;gap:7px;margin-top:8px">
+            <button class="btn btn-accent2 btn-full" id="multi-btn" onclick="uploadMultiPDF()" disabled>
+              🔀 Fuse & Import All
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="clearMultiFiles()" title="Clear files">✕</button>
+          </div>
+
+          <!-- progress -->
+          <div id="multi-progress" style="display:none;margin-top:10px">
+            <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px" id="multi-progress-text">Processing...</div>
+            <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
+              <div id="multi-progress-bar" style="height:100%;background:var(--accent2);width:0%;transition:width .4s;border-radius:4px"></div>
+            </div>
+          </div>
+
+          <div id="multi-result" style="display:none;margin-top:8px;font-size:.75rem"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- OWL TAB -->
+    <div class="tab-pane" id="tab-owl">
+      <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;padding:12px;gap:10px">
+
+        <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)">OWL / RDF-XML Editor</div>
+
+        <textarea id="owl-editor"
+          spellcheck="false"
+          style="flex:1;min-height:0;background:#0a0c16;color:#a8d8a8;
+                 border:1px solid var(--border);border-radius:8px;
+                 padding:10px;font-family:'Cascadia Code','Fira Code',monospace;
+                 font-size:.75rem;line-height:1.65;resize:none;outline:none;overflow-y:auto;"
+          placeholder="Paste or write OWL/RDF-XML here…"
+          oninput="owlLiveValidate()"></textarea>
+
+        <div id="owl-err" style="font-size:.71rem;color:var(--red);display:none;padding:2px 0"></div>
+        <div id="owl-ok"  style="font-size:.71rem;color:var(--green);display:none;padding:2px 0"></div>
+
+        <div style="display:flex;gap:7px;flex-shrink:0">
+          <button class="btn btn-accent btn-sm" style="flex:1" onclick="owlVisualize()">▶ Visualize</button>
+          <button class="btn btn-accent2 btn-sm" style="flex:1" onclick="owlImport()">⬆ Import to DB</button>
+          <button class="btn btn-outline btn-sm" onclick="owlDownload()">⬇</button>
+        </div>
+
+        <div style="flex-shrink:0">
+          <div style="font-size:.67rem;color:var(--muted);margin-bottom:5px">Insert template:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px">
+            <span class="owl-chip" onclick="owlInsertClass()">+ Class</span>
+            <span class="owl-chip" onclick="owlInsertProp()">+ Property</span>
+            <span class="owl-chip" onclick="owlInsertIndividual()">+ Individual</span>
+            <span class="owl-chip" onclick="owlInsertRelation()">+ Relation</span>
+            <span class="owl-chip" onclick="owlLoadDefault()">Default template</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end sidebar -->
+
+  <!-- ══ GRAPH CANVAS ══ -->
+  <div class="main">
+    <div id="graph-wrap">
+      <div class="ph" id="ph">
+        <div class="ph-icon">◎</div>
+        <div class="ph-text">Create nodes and relationships using the panel,<br/>or import a PDF to auto-build the graph</div>
+      </div>
+      <div id="loading"><div class="spinner"></div><p id="load-msg">Processing…</p></div>
+      <div id="network"></div>
+    </div>
+    <div class="toolbar">
+      <label>Layout:</label>
+      <select id="layout-sel" onchange="changeLayout()">
+        <option value="physics">Force-directed</option>
+        <option value="hierarchical">Hierarchical (Top→Down)</option>
+        <option value="hierarchical-lr">Hierarchical (Left→Right)</option>
+        <option value="circular">Circular</option>
+      </select>
+      <label style="margin-left:8px">Labels:</label>
+      <input type="range" id="edge-font" min="0" max="14" value="10" style="width:60px" oninput="setEdgeFont(this.value)"/>
+      <button class="btn btn-outline btn-sm" style="margin-left:6px" onclick="fitGraph()">⟳ Fit</button>
+      <span class="spacer"></span>
+      <span style="font-size:.68rem;opacity:.4">Right-click node for options · Scroll to zoom</span>
+    </div>
+  </div>
+
+  <!-- ══ DETAIL PANEL ══ -->
+  <div class="detail" id="detail">
+    <div class="detail-head">
+      <span class="dh-title" id="d-title">Node</span>
+      <button onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-body" id="d-body"></div>
+  </div>
+
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="ctx-menu">
+  <div class="ctx-item" onclick="ctxEdit()">✏️ Edit Node</div>
+  <div class="ctx-item" onclick="ctxConnect()">→ Connect to…</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" onclick="ctxDelete()">🗑 Delete Node</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let network=null, nodesDS=null, edgesDS=null;
+let graphData={nodes:[],edges:[]};
+let ctxNodeId=null, connectMode=false, connectFrom=null;
+let selectedFile=null;
+
+// ── Type → color ──────────────────────────────────────────────────────────────
+const TYPE_COLOR={
+  Person:"#ff6b9d",Organization:"#7c83fd",Location:"#4ecdc4",
+  Concept:"#dda0dd",Event:"#ff8c69",Date:"#f0a500",
+  Product:"#96ceb4",Group:"#ffa07a",Node:"#00d4aa",
+};
+const typeColor = t => TYPE_COLOR[t] || "#00d4aa";
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener("load", ()=>{
+  // restore saved theme
+  if(localStorage.getItem("theme") === "light"){
+    document.documentElement.classList.add("light");
+    document.getElementById("theme-btn").textContent = "🌙 Dark";
+  }
+  loadGraph(); buildQueryChips();
+});
+
+async function loadGraph(){
+  const res  = await fetch("/graph?t=" + Date.now());
+  const data = await res.json();
+  renderGraph(data);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name){
+  const names=["create","nodes","query","ask","pdf","owl"];
+  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
+  document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active"));
+  document.getElementById("tab-"+name).classList.add("active");
+  if(name==="nodes") refreshNodeList();
+  if(name==="owl" && !document.getElementById("owl-editor").value) owlLoadDefault();
+}
+
+// ── Graph render ──────────────────────────────────────────────────────────────
+function renderGraph(data){
+  graphData = data;
+  document.getElementById("ph").style.display = data.nodes.length ? "none" : "flex";
+  updateHeader();
+  refreshNodeList();
+  updateDatalist();
+
+  if(network){ network.destroy(); network=null; }
+  const container = document.getElementById("network");
+
+  const deg={};
+  data.edges.forEach(e=>{ deg[e.from]=(deg[e.from]||0)+1; deg[e.to]=(deg[e.to]||0)+1; });
+
+  nodesDS = new vis.DataSet(data.nodes.map(n=>{
+    const col = typeColor(n.type||"Node");
+    return {
+      id: n.id, label: n.label,
+      title: buildTooltip(n),
+      color:{ background:col+"cc", border:col,
+              highlight:{background:"#f0a500",border:"#fff"},
+              hover:{background:col,border:"#fff"} },
+      font:{ color:"#e2e8f0", size:12 },
+      size: 14 + Math.min((deg[n.id]||0)*2, 24),
+      shape: shapeFor(n.type||"Node"),
+      type: n.type||"Node",
+    };
+  }));
+
+  const isLight = document.documentElement.classList.contains("light");
+  const edgeCol  = isLight ? "#94a3b8" : "#2a3050";
+  const fontCol  = isLight ? "#475569" : "#64748b";
+  const accentCol= isLight ? "#00a884" : "#00d4aa";
+
+  edgesDS = new vis.DataSet(data.edges.map(e=>({
+    id:e.id, from:e.from, to:e.to, label:e.label||"",
+    arrows:{to:{enabled:true,scaleFactor:0.6}},
+    color:{color:edgeCol, highlight:accentCol, hover:accentCol},
+    font:{color:fontCol, size:10, align:"middle", strokeWidth:0},
+    smooth:{type:"curvedCW",roundness:0.1},
+  })));  network = new vis.Network(container,{nodes:nodesDS,edges:edgesDS},{
+    physics:{
+      enabled:true, solver:"forceAtlas2Based",
+      forceAtlas2Based:{gravitationalConstant:-60,centralGravity:0.005,springLength:140,springConstant:0.08,damping:0.4},
+      stabilization:{iterations:150,fit:true},
+    },
+    interaction:{hover:true,tooltipDelay:200,multiselect:false},
+  });
+
+  network.on("stabilizationIterationsDone",()=>{ network.fit(); setLoading(false); });
+
+  // left click
+  network.on("click", p=>{
+    hideCtx();
+    if(connectMode && p.nodes.length>0){
+      finishConnect(p.nodes[0]); return;
+    }
+    if(p.nodes.length>0) showDetail(p.nodes[0]);
+    else closeDetail();
+  });
+
+  // right click → context menu
+  network.on("oncontext", p=>{
+    p.event.preventDefault();
+    if(p.nodes.length>0){
+      ctxNodeId = p.nodes[0];
+      showCtx(p.event.clientX, p.event.clientY);
+    }
+  });
+
+  // double-click node → edit inline
+  network.on("doubleClick", p=>{
+    if(p.nodes.length>0) openEditPanel(p.nodes[0]);
+  });
+}
+
+function shapeFor(t){
+  return{Person:"ellipse",Organization:"box",Location:"triangle",
+         Concept:"hexagon",Event:"star",Date:"dot",Product:"square"}[t]||"dot";
+}
+
+function buildTooltip(n){
+  let s=`<b style="color:#00d4aa">${n.label}</b><br/><span style="color:#64748b">${n.type||"Node"}</span>`;
+  if(n.properties && Object.keys(n.properties).length){
+    s+="<br/>";
+    for(const [k,v] of Object.entries(n.properties)) s+=`<br/><span style="color:#94a3b8">${k}:</span> ${v}`;
+  }
+  return s;
+}
+
+// ── Header stats ──────────────────────────────────────────────────────────────
+function updateHeader(){
+  document.getElementById("h-nodes").textContent = graphData.nodes.length;
+  document.getElementById("h-edges").textContent = graphData.edges.length;
+}
+
+// ── Node list (sidebar) ───────────────────────────────────────────────────────
+function refreshNodeList(){
+  const q   = (document.getElementById("node-search")?.value||"").toLowerCase();
+  const list = document.getElementById("node-list");
+  if(!list) return;
+  const nodes = graphData.nodes.filter(n=>!q||n.label.toLowerCase().includes(q)||(n.type||"").toLowerCase().includes(q));
+  list.innerHTML = nodes.map(n=>`
+    <div class="node-item" id="ni-${n.id}" onclick="focusNode('${esc(n.id)}')">
+      <div class="node-dot" style="background:${typeColor(n.type||'Node')}"></div>
+      <span class="node-name">${esc(n.label)}</span>
+      <span class="node-type">${n.type||"Node"}</span>
+    </div>`).join("");
+}
+function filterNodes(){ refreshNodeList(); }
+
+function updateDatalist(){
+  document.getElementById("node-datalist").innerHTML =
+    graphData.nodes.map(n=>`<option value="${esc(n.label)}">`).join("");
+}
+
+// ── Add node ──────────────────────────────────────────────────────────────────
+async function addNode(){
+  const label = document.getElementById("n-label").value.trim();
+  const type  = document.getElementById("n-type").value;
+  const raw   = document.getElementById("n-props").value.trim();
+  if(!label){ toast("Enter a label","err"); return; }
+  const properties = parseProps(raw);
+  const res  = await fetch("/node",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({label,type,properties})});
+  const data = await res.json();
+  if(data.error){ toast(data.error,"err"); return; }
+  document.getElementById("n-label").value="";
+  document.getElementById("n-props").value="";
+  renderGraph(data.graph);
+  toast(`Node "${label}" created`,"ok");
+  // focus new node
+  setTimeout(()=>{ if(network) network.focus(data.id,{scale:1.2,animation:true}); },300);
+}
+
+// ── Add edge ──────────────────────────────────────────────────────────────────
+async function addEdge(){
+  const fromLabel = document.getElementById("e-from").value.trim();
+  const rel       = document.getElementById("e-rel").value.trim() || "RELATED_TO";
+  const toLabel   = document.getElementById("e-to").value.trim();
+  if(!fromLabel||!toLabel){ toast("Fill From and To","err"); return; }
+  // resolve labels to IDs
+  const fromNode = graphData.nodes.find(n=>n.label.toLowerCase()===fromLabel.toLowerCase());
+  const toNode   = graphData.nodes.find(n=>n.label.toLowerCase()===toLabel.toLowerCase());
+  if(!fromNode){ toast(`Node "${fromLabel}" not found`,"err"); return; }
+  if(!toNode)  { toast(`Node "${toLabel}" not found`,  "err"); return; }
+  const res  = await fetch("/edge",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({from:fromNode.id,to:toNode.id,relation:rel})});
+  const data = await res.json();
+  if(data.error){ toast(data.error,"err"); return; }
+  document.getElementById("e-from").value="";
+  document.getElementById("e-rel").value="";
+  document.getElementById("e-to").value="";
+  renderGraph(data.graph);
+  toast(`Relationship "${rel}" created`,"ok");
+}
+
+// ── Detail panel ──────────────────────────────────────────────────────────────
+function showDetail(nodeId){
+  const node = graphData.nodes.find(n=>n.id===nodeId); if(!node) return;
+  document.getElementById("d-title").textContent = node.label;
+  const out = graphData.edges.filter(e=>e.from===nodeId);
+  const inc = graphData.edges.filter(e=>e.to  ===nodeId);
+  const props = node.properties||{};
+  document.getElementById("d-body").innerHTML = `
+    <div class="d-sec">Type</div>
+    <div class="d-val" style="color:${typeColor(node.type||'Node')}">${node.type||"Node"}</div>
+    ${Object.keys(props).length?`
+    <div class="d-sec">Properties</div>
+    ${Object.entries(props).map(([k,v])=>`<div class="d-prop-row"><span class="pk">${esc(k)}</span><span class="pv">${esc(String(v))}</span></div>`).join("")}`:""}
+    <div class="d-sec">Outgoing (${out.length})</div>
+    ${out.slice(0,30).map(e=>{
+      const t=graphData.nodes.find(n=>n.id===e.to);
+      return`<div class="d-rel-row"><span class="rs">${esc(node.label)}</span> <span class="rr">-[${esc(e.label)}]→</span> <span class="ro">${esc(t?t.label:e.to)}</span></div>`;
+    }).join("")||'<div style="color:var(--muted);font-size:.72rem">None</div>'}
+    <div class="d-sec">Incoming (${inc.length})</div>
+    ${inc.slice(0,30).map(e=>{
+      const s=graphData.nodes.find(n=>n.id===e.from);
+      return`<div class="d-rel-row"><span class="rs">${esc(s?s.label:e.from)}</span> <span class="rr">-[${esc(e.label)}]→</span> <span class="ro">${esc(node.label)}</span></div>`;
+    }).join("")||'<div style="color:var(--muted);font-size:.72rem">None</div>'}
+    <div style="display:flex;gap:7px;margin-top:8px">
+      <button class="btn btn-outline btn-sm" style="flex:1" onclick="openEditPanel('${esc(nodeId)}')">✏️ Edit</button>
+      <button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteNode('${esc(nodeId)}')">🗑 Delete</button>
+    </div>
+  `;
+  document.getElementById("detail").classList.add("open");
+  // highlight
+  if(nodesDS){
+    const conn=network.getConnectedNodes(nodeId);
+    nodesDS.update(nodesDS.getIds().map(id=>({id,opacity:(id===nodeId||conn.includes(id))?1:0.15})));
+  }
+}
+
+function closeDetail(){
+  document.getElementById("detail").classList.remove("open");
+  if(nodesDS) nodesDS.update(nodesDS.getIds().map(id=>({id,opacity:1})));
+}
+
+function focusNode(id){
+  if(!network) return;
+  network.focus(id,{scale:1.3,animation:true});
+  showDetail(id);
+}
+
+// ── Edit panel ────────────────────────────────────────────────────────────────
+function openEditPanel(nodeId){
+  const node = graphData.nodes.find(n=>n.id===nodeId); if(!node) return;
+  const props = node.properties||{};
+  const propsStr = Object.entries(props).map(([k,v])=>`${k}: ${v}`).join("\n");
+  document.getElementById("d-title").textContent = "Edit: "+node.label;
+  document.getElementById("d-body").innerHTML = `
+    <div class="d-sec">Label</div>
+    <input class="edit-inp" id="edit-label" value="${esc(node.label)}"/>
+    <div class="d-sec" style="margin-top:8px">Type</div>
+    <select class="edit-inp" id="edit-type">
+      ${["Person","Organization","Location","Concept","Event","Date","Product","Group","Node"]
+        .map(t=>`<option${t===node.type?" selected":""}>${t}</option>`).join("")}
+    </select>
+    <div class="d-sec" style="margin-top:8px">Properties</div>
+    <textarea class="edit-inp" id="edit-props" rows="4" style="resize:vertical">${esc(propsStr)}</textarea>
+    <div style="display:flex;gap:7px;margin-top:10px">
+      <button class="btn btn-accent btn-sm" style="flex:1" onclick="saveEdit('${esc(nodeId)}')">✓ Save</button>
+      <button class="btn btn-outline btn-sm" style="flex:1" onclick="showDetail('${esc(nodeId)}')">Cancel</button>
+    </div>
+  `;
+  document.getElementById("detail").classList.add("open");
+}
+
+async function saveEdit(nodeId){
+  const label = document.getElementById("edit-label").value.trim();
+  const type  = document.getElementById("edit-type").value;
+  const raw   = document.getElementById("edit-props").value.trim();
+  const properties = parseProps(raw);
+  const res  = await fetch(`/node/${nodeId}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({label,type,properties})});
+  const data = await res.json();
+  if(data.error){ toast(data.error,"err"); return; }
+  renderGraph(data.graph);
+  showDetail(nodeId);
+  toast("Node updated","ok");
+}
+
+async function deleteNode(nodeId){
+  if(!confirm("Delete this node and all its relationships?")) return;
+  const res  = await fetch(`/node/${nodeId}`,{method:"DELETE"});
+  const data = await res.json();
+  closeDetail();
+  renderGraph(data.graph);
+  toast("Node deleted","ok");
+}
+
+// ── Context menu ──────────────────────────────────────────────────────────────
+function showCtx(x,y){
+  const m=document.getElementById("ctx-menu");
+  m.style.left=x+"px"; m.style.top=y+"px";
+  m.classList.add("show");
+}
+function hideCtx(){ document.getElementById("ctx-menu").classList.remove("show"); }
+document.addEventListener("click",hideCtx);
+
+function ctxEdit(){ if(ctxNodeId) openEditPanel(ctxNodeId); }
+function ctxDelete(){ if(ctxNodeId) deleteNode(ctxNodeId); }
+function ctxConnect(){
+  if(!ctxNodeId) return;
+  connectMode=true; connectFrom=ctxNodeId;
+  const node=graphData.nodes.find(n=>n.id===ctxNodeId);
+  toast(`Click target node to connect from "${node?.label||ctxNodeId}"…`,"ok");
+}
+
+async function finishConnect(toId){
+  connectMode=false;
+  if(toId===connectFrom){ toast("Can't connect to itself","err"); return; }
+  const rel = prompt("Relationship type:", "RELATED_TO");
+  if(!rel) return;
+  const res  = await fetch("/edge",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({from:connectFrom,to:toId,relation:rel})});
+  const data = await res.json();
+  if(data.error){ toast(data.error,"err"); return; }
+  renderGraph(data.graph);
+  toast(`Relationship "${rel}" created`,"ok");
+}
+
+// ── Query ─────────────────────────────────────────────────────────────────────
+const EXAMPLE_QUERIES = [
+  "STATS",
+  "MATCH (n)",
+  "MATCH (n:Person)",
+  "MATCH (n:Person) RETURN n.label, n.type",
+  "MATCH (n:Person) ORDER BY n.label",
+  "MATCH (n) WHERE n.label CONTAINS \"Ein\"",
+  "MATCH (n) WHERE n.type = \"Person\"",
+  "MATCH (n)-[r]->(m)",
+  "MATCH (n)-[r:DISCOVERED]->(m)",
+  "MATCH (n:Person)-[r]->(m)",
+  "MATCH (n:Person)-[r:WON]->(m:Event)",
+  "MATCH (n)-[r]->(m) WHERE n.type = \"Person\"",
+  "MATCH (n)-[r]->(m) RETURN n.label, r.type, m.label",
+  "COUNT (n:Person)",
+  "COUNT (n)-[r:WON]->(m)",
+  "PATH FROM \"Albert Einstein\" TO \"Nobel Prize\"",
+  "NEIGHBORS \"Albert Einstein\"",
+];
+
+function buildQueryChips(){
+  const wrap = document.getElementById("q-chips");
+  if(!wrap) return;
+  wrap.innerHTML = EXAMPLE_QUERIES.map(q=>
+    `<span onclick="setQuery('${q.replace(/'/g,"\\'")}');runQuery()"
+      style="background:var(--card);border:1px solid var(--border);border-radius:5px;
+             padding:2px 8px;font-size:.67rem;color:var(--muted);cursor:pointer;
+             font-family:monospace;white-space:nowrap;transition:all .15s"
+      onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'"
+    >${esc(q)}</span>`
+  ).join("");
+}
+
+function setQuery(q){ document.getElementById("q-input").value = q; }
+function clearQuery(){
+  document.getElementById("q-input").value="";
+  document.getElementById("q-table-wrap").style.display="none";
+  document.getElementById("q-message").style.display="none";
+  document.getElementById("q-error").style.display="none";
+  loadGraph();
+}
+
+async function runQuery(){
+  const q = document.getElementById("q-input").value.trim();
+  if(!q) return;
+  const res  = await fetch("/query",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({q})});
+  const data = await res.json();
+
+  const msgEl = document.getElementById("q-message");
+  const errEl = document.getElementById("q-error");
+  const tblWrap = document.getElementById("q-table-wrap");
+
+  if(data.error){
+    errEl.textContent = "⚠ " + data.error;
+    errEl.style.display = "block";
+    msgEl.style.display = "none";
+    tblWrap.style.display = "none";
+    return;
+  }
+
+  errEl.style.display = "none";
+  msgEl.textContent = "✓ " + data.message;
+  msgEl.style.display = "block";
+
+  // render table
+  if(data.rows && data.rows.length > 0){
+    tblWrap.style.display = "block";
+    const tbl = document.getElementById("q-table");
+    const hdr = `<tr>${data.columns.map(c=>`<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--accent);text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">${esc(String(c))}</th>`).join("")}</tr>`;
+    const bdy = data.rows.map((row,i)=>
+      `<tr style="background:${i%2?"var(--card)":"transparent"}">${
+        row.map(cell=>{
+          const v = typeof cell==="object" ? JSON.stringify(cell) : String(cell);
+          return `<td style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text);font-size:.73rem;font-family:monospace">${esc(v)}</td>`;
+        }).join("")
+      }</tr>`
+    ).join("");
+    tbl.innerHTML = `<thead>${hdr}</thead><tbody>${bdy}</tbody>`;
+  } else {
+    tblWrap.style.display = "none";
+  }
+
+  // update graph if result has nodes
+  if(data.graph && (data.graph.nodes.length > 0 || data.graph.edges.length > 0)){
+    renderGraph(data.graph);
+  }
+}
+
+// ── AI Query ──────────────────────────────────────────────────────────────────
+function setAIQ(q){ document.getElementById("ai-question").value = q; }
+
+async function askAI(){
+  const question = document.getElementById("ai-question").value.trim();
+  if(!question) return;
+
+  document.getElementById("ai-result").style.display  = "none";
+  document.getElementById("ai-error").style.display   = "none";
+  document.getElementById("ai-loading").style.display = "flex";
+
+  try{
+    const res  = await fetch("/ask",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({question})});
+    const data = await res.json();
+
+    document.getElementById("ai-loading").style.display = "none";
+
+    if(data.error){ 
+      document.getElementById("ai-error").textContent = data.error;
+      document.getElementById("ai-error").style.display = "block";
+      return;
+    }
+
+    document.getElementById("ai-answer").textContent = data.answer;
+    const conf = data.confidence || "medium";
+    document.getElementById("ai-confidence").textContent =
+      conf==="high" ? "✅ High confidence" : conf==="medium" ? "⚠ Medium confidence" : "❓ Low confidence";
+    document.getElementById("ai-result").style.display = "block";
+
+    // highlight relevant nodes on graph
+    const relNodes = data.relevant_node_ids || [];
+    if(relNodes.length > 0 && nodesDS){
+      nodesDS.update(nodesDS.getIds().map(id=>({
+        id, opacity: relNodes.includes(id) ? 1 : 0.12
+      })));
+      // zoom to relevant nodes
+      network.fit({nodes: relNodes, animation: true});
+      document.getElementById("ai-highlight-count").textContent = relNodes.length;
+      document.getElementById("ai-highlight-info").style.display = "block";
+    }
+
+  }catch(e){
+    document.getElementById("ai-loading").style.display = "none";
+    document.getElementById("ai-error").textContent = "Request failed: " + e.message;
+    document.getElementById("ai-error").style.display = "block";
+  }
+}
+
+function clearAIHighlight(){
+  if(nodesDS) nodesDS.update(nodesDS.getIds().map(id=>({id, opacity:1})));
+  document.getElementById("ai-highlight-info").style.display = "none";
+}
+
+// ── PDF ───────────────────────────────────────────────────────────────────────
+function onFileSelect(e){ setFile(e.target.files[0]); }
+function onDragOver(e){ e.preventDefault(); document.getElementById("upload-zone").classList.add("drag"); }
+function onDragLeave(){ document.getElementById("upload-zone").classList.remove("drag"); }
+function onDrop(e){
+  e.preventDefault(); document.getElementById("upload-zone").classList.remove("drag");
+  const f=e.dataTransfer.files[0];
+  if(f&&f.name.toLowerCase().endsWith(".pdf")) setFile(f);
+}
+function setFile(f){
+  selectedFile=f;
+  document.getElementById("uz-file").textContent=f.name;
+  document.getElementById("pdf-btn").disabled=false;
+}
+
+async function uploadPDF(){
+  if(!selectedFile) return;
+  setLoading(true,"Extracting entities from PDF… (may take 30-60s)");
+  document.getElementById("pdf-btn").disabled=true;
+  const form=new FormData(); form.append("pdf",selectedFile);
+  try{
+    const res  = await fetch("/upload",{method:"POST",body:form});
+    const data = await res.json();
+    if(data.error){ toast(data.error,"err"); return; }
+    setLoading(false);
+    renderGraph(data.graph);
+    const r=document.getElementById("pdf-result");
+    r.style.display="block";
+    r.innerHTML=`✅ <span style="color:var(--accent)">${data.stats.nodes}</span> nodes &amp; <span style="color:var(--accent2)">${data.stats.edges}</span> edges imported`;
+    toast(`PDF imported: ${data.stats.nodes} nodes, ${data.stats.edges} edges`,"ok");
+  }catch(e){ toast("Upload failed: "+e.message,"err"); }
+  finally{ setLoading(false); document.getElementById("pdf-btn").disabled=false; }
+}
+
+// ── Multi PDF Fusion ──────────────────────────────────────────────────────────
+let multiFiles = [];
+
+function onMultiDragOver(e){ e.preventDefault(); document.getElementById("multi-upload-zone").classList.add("drag"); }
+function onMultiDragLeave(){ document.getElementById("multi-upload-zone").classList.remove("drag"); }
+function onMultiDrop(e){
+  e.preventDefault(); document.getElementById("multi-upload-zone").classList.remove("drag");
+  const files = [...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith(".pdf"));
+  if(files.length) addMultiFiles(files);
+}
+function onMultiFileSelect(e){ addMultiFiles([...e.target.files]); }
+
+function addMultiFiles(files){
+  files.forEach(f=>{ if(!multiFiles.find(x=>x.name===f.name)) multiFiles.push(f); });
+  renderMultiFileList();
+}
+
+function renderMultiFileList(){
+  const list = document.getElementById("multi-file-list");
+  if(!multiFiles.length){ list.style.display="none"; document.getElementById("multi-btn").disabled=true; return; }
+  list.style.display="flex";
+  list.innerHTML = multiFiles.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);
+                border-radius:6px;padding:5px 8px;font-size:.74rem;">
+      <span style="color:var(--accent2)">📄</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(f.name)}</span>
+      <span style="color:var(--muted);font-size:.68rem">${(f.size/1024).toFixed(0)}KB</span>
+      <span style="cursor:pointer;color:var(--red);font-size:.8rem" onclick="removeMultiFile(${i})">✕</span>
+    </div>`).join("");
+  document.getElementById("multi-btn").disabled = multiFiles.length < 1;
+}
+
+function removeMultiFile(i){ multiFiles.splice(i,1); renderMultiFileList(); }
+function clearMultiFiles(){
+  multiFiles=[];
+  renderMultiFileList();
+  document.getElementById("multi-result").style.display="none";
+  document.getElementById("multi-progress").style.display="none";
+  document.getElementById("multi-pdf-input").value="";
+}
+
+async function uploadMultiPDF(){
+  if(!multiFiles.length) return;
+  document.getElementById("multi-btn").disabled=true;
+  document.getElementById("multi-result").style.display="none";
+  document.getElementById("multi-progress").style.display="block";
+
+  let totalNodes=0, totalEdges=0, done=0;
+
+  for(const file of multiFiles){
+    const pct = Math.round((done/multiFiles.length)*100);
+    document.getElementById("multi-progress-bar").style.width = pct+"%";
+    document.getElementById("multi-progress-text").textContent =
+      `Processing ${done+1}/${multiFiles.length}: ${file.name}`;
+
+    try{
+      const form = new FormData(); form.append("pdf", file);
+      const res  = await fetch("/upload",{method:"POST",body:form});
+      const data = await res.json();
+      if(!data.error){
+        totalNodes += data.stats?.nodes || 0;
+        totalEdges += data.stats?.edges || 0;
+      }
+    }catch(e){ console.warn("Failed:", file.name, e); }
+    done++;
+  }
+
+  // final progress
+  document.getElementById("multi-progress-bar").style.width="100%";
+  document.getElementById("multi-progress-text").textContent="Fusion complete! Loading graph...";
+
+  // reload graph
+  await loadGraph();
+  setLoading(false);
+
+  document.getElementById("multi-progress").style.display="none";
+  const r = document.getElementById("multi-result");
+  r.style.display="block";
+  r.innerHTML=`
+    <div style="background:var(--card);border:1px solid var(--accent2);border-radius:8px;padding:10px">
+      <div style="color:var(--accent2);font-weight:600;margin-bottom:4px">🔀 Fusion Complete</div>
+      <div style="color:var(--muted)">
+        <b style="color:var(--text)">${multiFiles.length}</b> PDFs processed &nbsp;·&nbsp;
+        <b style="color:var(--accent)">${totalNodes}</b> nodes &nbsp;·&nbsp;
+        <b style="color:var(--accent2)">${totalEdges}</b> edges merged into graph
+      </div>
+    </div>`;
+  toast(`${multiFiles.length} PDFs fused — ${totalNodes} nodes, ${totalEdges} edges`,"ok");
+  document.getElementById("multi-btn").disabled=false;
+}
+
+// ── Toolbar ───────────────────────────────────────────────────────────────────
+function changeLayout(){
+  if(!network) return;
+  const v=document.getElementById("layout-sel").value;
+  if(v==="hierarchical"||v==="hierarchical-lr"){
+    network.setOptions({layout:{hierarchical:{enabled:true,direction:v==="hierarchical"?"UD":"LR",sortMethod:"directed",levelSeparation:120}},physics:{enabled:false}});
+  } else if(v==="circular"){
+    network.setOptions({layout:{hierarchical:{enabled:false}},physics:{enabled:false}});
+    const ids=nodesDS.getIds(), r=Math.max(240,ids.length*18);
+    ids.forEach((id,i)=>{ const a=(2*Math.PI*i)/ids.length; network.moveNode(id,r*Math.cos(a),r*Math.sin(a)); });
+    network.fit();
+  } else {
+    network.setOptions({layout:{hierarchical:{enabled:false}},physics:{enabled:true}});
+  }
+}
+function setEdgeFont(v){
+  if(!edgesDS) return;
+  edgesDS.update(edgesDS.getIds().map(id=>({id,font:{size:+v,color:"#64748b",align:"middle",strokeWidth:0}})));
+}
+function fitGraph(){ if(network) network.fit({animation:true}); }
+
+// ── Misc ──────────────────────────────────────────────────────────────────────
+async function clearAll(){
+  if(!confirm("Delete ALL nodes and relationships?")) return;
+  const res  = await fetch("/clear",{method:"POST"});
+  const data = await res.json();
+  renderGraph(data.graph);
+  closeDetail();
+  // also reload from server to confirm
+  await loadGraph();
+  toast("Graph cleared","ok");
+}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(graphData,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="graph.json"; a.click();
+}
+
+function toggleTheme(){
+  const isLight = document.documentElement.classList.toggle("light");
+  document.getElementById("theme-btn").textContent = isLight ? "🌙 Dark" : "☀ Light";
+  localStorage.setItem("theme", isLight ? "light" : "dark");
+  // re-render graph with updated colors
+  if(graphData.nodes.length) renderGraph(graphData);
+}
+
+function setLoading(on,msg="Processing…"){
+  document.getElementById("load-msg").textContent=msg;
+  document.getElementById("loading").classList.toggle("show",on);
+}
+
+function parseProps(raw){
+  const props={};
+  raw.split("\n").forEach(line=>{
+    const idx=line.indexOf(":");
+    if(idx>0){
+      const k=line.slice(0,idx).trim(), v=line.slice(idx+1).trim();
+      if(k) props[k]=v;
+    }
+  });
+  return props;
+}
+
+let toastT=null;
+function toast(msg,type="ok"){
+  const el=document.getElementById("toast");
+  el.textContent=msg; el.className="show "+(type==="err"?"err":"ok");
+  if(toastT) clearTimeout(toastT);
+  toastT=setTimeout(()=>el.className="",3200);
+}
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function escA(s){ return String(s).replace(/'/g,"\\'"); }
+
+// ── OWL Editor ────────────────────────────────────────────────────────────────
+const OWL_DEFAULT = `<?xml version="1.0"?>
+<rdf:RDF
+  xmlns:onto="http://research-kg.org/ontology#"
+  xmlns:owl ="http://www.w3.org/2002/07/owl#"
+  xmlns:rdf ="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+
+  <owl:Ontology rdf:about="http://research-kg.org/ontology"/>
+
+  <!-- Classes -->
+  <owl:Class rdf:about="http://research-kg.org/ontology#Person"/>
+  <owl:Class rdf:about="http://research-kg.org/ontology#Organization"/>
+  <owl:Class rdf:about="http://research-kg.org/ontology#Concept"/>
+  <owl:Class rdf:about="http://research-kg.org/ontology#Location"/>
+
+  <!-- Object Properties -->
+  <owl:ObjectProperty rdf:about="http://research-kg.org/ontology#related_to"/>
+  <owl:ObjectProperty rdf:about="http://research-kg.org/ontology#works_at"/>
+
+  <!-- Individuals -->
+  <owl:NamedIndividual rdf:about="http://research-kg.org/ontology#Albert_Einstein">
+    <rdf:type rdf:resource="http://research-kg.org/ontology#Person"/>
+    <rdfs:label>Albert Einstein</rdfs:label>
+  </owl:NamedIndividual>
+
+  <owl:NamedIndividual rdf:about="http://research-kg.org/ontology#Princeton_University">
+    <rdf:type rdf:resource="http://research-kg.org/ontology#Organization"/>
+    <rdfs:label>Princeton University</rdfs:label>
+  </owl:NamedIndividual>
+
+  <!-- Assertions -->
+  <rdf:Description rdf:about="http://research-kg.org/ontology#Albert_Einstein">
+    <onto:works_at xmlns:onto="http://research-kg.org/ontology#"
+      rdf:resource="http://research-kg.org/ontology#Princeton_University"/>
+  </rdf:Description>
+
+</rdf:RDF>`;
+
+function owlLoadDefault(){
+  document.getElementById("owl-editor").value = OWL_DEFAULT;
+  owlLiveValidate();
+}
+
+function owlLiveValidate(){
+  const text = document.getElementById("owl-editor").value.trim();
+  const errEl = document.getElementById("owl-err");
+  const okEl  = document.getElementById("owl-ok");
+  if(!text){ errEl.style.display="none"; okEl.style.display="none"; return; }
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text,"application/xml");
+    const parseErr = doc.querySelector("parsererror");
+    if(parseErr){
+      errEl.textContent = "⚠ " + parseErr.textContent.split("\n")[0].slice(0,80);
+      errEl.style.display="block"; okEl.style.display="none";
+    } else {
+      okEl.textContent = "✓ Valid XML";
+      okEl.style.display="block"; errEl.style.display="none";
+    }
+  } catch(e){
+    errEl.textContent="⚠ "+e.message; errEl.style.display="block"; okEl.style.display="none";
+  }
+}
+
+async function owlVisualize(){
+  const text = document.getElementById("owl-editor").value.trim();
+  if(!text){ toast("Editor is empty","err"); return; }
+  setLoading(true,"Parsing OWL…");
+  try{
+    const res  = await fetch("/owl/parse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({owl:text})});
+    const data = await res.json();
+    if(data.error){ toast(data.error,"err"); return; }
+    renderGraph(data.graph);
+    toast("Visualized: "+data.graph.nodes.length+" nodes, "+data.graph.edges.length+" edges","ok");
+  } catch(e){ toast(e.message,"err"); }
+  finally{ setLoading(false); }
+}
+
+async function owlImport(){
+  const text = document.getElementById("owl-editor").value.trim();
+  if(!text){ toast("Editor is empty","err"); return; }
+  setLoading(true,"Importing OWL into graph DB…");
+  try{
+    const res  = await fetch("/owl/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({owl:text})});
+    const data = await res.json();
+    if(data.error){ toast(data.error,"err"); return; }
+    renderGraph(data.graph);
+    toast("Imported: "+data.added_nodes+" nodes, "+data.added_edges+" edges added","ok");
+  } catch(e){ toast(e.message,"err"); }
+  finally{ setLoading(false); }
+}
+
+function owlDownload(){
+  const text = document.getElementById("owl-editor").value.trim();
+  if(!text){ toast("Nothing to download","err"); return; }
+  const blob = new Blob([text],{type:"application/rdf+xml"});
+  const a = document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="ontology.owl"; a.click();
+}
+
+function owlInsert(snippet){
+  const ta = document.getElementById("owl-editor");
+  const before = ta.value.lastIndexOf("</rdf:RDF>");
+  if(before >= 0){
+    ta.value = ta.value.slice(0,before) + "\n" + snippet + "\n" + ta.value.slice(before);
+  } else {
+    ta.value += "\n" + snippet;
+  }
+  owlLiveValidate();
+}
+
+function owlInsertClass(){
+  const name = prompt("Class name (e.g. ResearchPaper):","");
+  if(!name) return;
+  owlInsert('  <owl:Class rdf:about="http://research-kg.org/ontology#'+name.replace(/\s+/g,"_")+'"/>');
+}
+function owlInsertProp(){
+  const name = prompt("Property name (e.g. cites):","");
+  if(!name) return;
+  owlInsert('  <owl:ObjectProperty rdf:about="http://research-kg.org/ontology#'+name.replace(/\s+/g,"_")+'"/>');
+}
+function owlInsertIndividual(){
+  const label = prompt("Individual label (e.g. Albert Einstein):","");
+  const type  = prompt("Type (e.g. Person):","Person");
+  if(!label) return;
+  const id = label.replace(/\s+/g,"_");
+  const base = "http://research-kg.org/ontology#";
+  owlInsert('  <owl:NamedIndividual rdf:about="'+base+id+'">\n    <rdf:type rdf:resource="'+base+(type||"Thing")+'"/>\n    <rdfs:label>'+label+'</rdfs:label>\n  </owl:NamedIndividual>');
+}
+function owlInsertRelation(){
+  const subj = prompt("Subject ID (e.g. Albert_Einstein):","");
+  const prop = prompt("Property (e.g. works_at):","");
+  const obj  = prompt("Object ID (e.g. Princeton_University):","");
+  if(!subj||!prop||!obj) return;
+  const base = "http://research-kg.org/ontology#";
+  owlInsert('  <rdf:Description rdf:about="'+base+subj+'">\n    <onto:'+prop+' xmlns:onto="'+base+'" rdf:resource="'+base+obj+'"/>\n  </rdf:Description>');
+}
+</script>
+</body>
+</html>
