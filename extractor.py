@@ -6,18 +6,18 @@ import re
 import pdfplumber
 import spacy
 
-try:
-    nlp = spacy.load("en_core_web_lg")
-except OSError:
-    try:
-        nlp = spacy.load("en_core_web_md")
-    except OSError:
+_nlp = None
+
+def get_nlp():
+    global _nlp
+    if _nlp is None:
         try:
-            nlp = spacy.load("en_core_web_sm")
+            _nlp = spacy.load("en_core_web_sm")
         except OSError:
             import subprocess, sys
             subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"], check=True)
-            nlp = spacy.load("en_core_web_sm")
+            _nlp = spacy.load("en_core_web_sm")
+    return _nlp
 
 NER_TYPE_MAP = {
     "PERSON":"Person","ORG":"Organization","GPE":"Location","LOC":"Location",
@@ -48,12 +48,12 @@ def extract_graph(pdf_path):
             if t:
                 t = re.sub(r"\(cid:\d+\)", " ", t)  # fix font encoding artifacts
                 pages.append(t)
-    text = "\n".join(pages)[:80_000]
+    text = "\n".join(pages)[:50_000]  # limit to 50k chars on server
 
     if not text.strip():
         return {"nodes": [], "edges": [], "stats": {"nodes": 0, "edges": 0, "error": "No text could be extracted from this PDF. It may be image-based."}}
 
-    doc       = nlp(text)
+    doc       = get_nlp()(text[:50_000])  # limit to 50k chars to save memory
     ent_types = {_clean(e.text): NER_TYPE_MAP.get(e.label_, "Concept") for e in doc.ents if len(_clean(e.text)) > 1}
 
     nodes = {}
