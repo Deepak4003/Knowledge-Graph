@@ -21,8 +21,13 @@ migrate_json_if_needed()
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
+@app.route("/health")
+def health():
+    import spacy
+    models = spacy.util.get_installed_models()
+    return jsonify({"status": "ok", "spacy_models": list(models)})
+
 @app.route("/")
-def index():
     return render_template("index.html")
 
 @app.route("/graph", methods=["GET"])
