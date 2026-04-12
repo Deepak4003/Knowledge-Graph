@@ -21,7 +21,22 @@ migrate_json_if_needed()
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
-@app.route("/health")
+@app.route("/debug/upload-test", methods=["GET"])
+def debug_upload_test():
+    import traceback
+    try:
+        from extractor import extract_graph
+        import os
+        # test with any existing pdf
+        uploads = os.listdir(UPLOAD_FOLDER)
+        pdfs = [f for f in uploads if f.lower().endswith('.pdf')]
+        if not pdfs:
+            return jsonify({"error": "no pdfs in uploads folder"})
+        result = extract_graph(os.path.join(UPLOAD_FOLDER, pdfs[0]))
+        return jsonify({"ok": True, "file": pdfs[0], "stats": result["stats"]})
+    except Exception as e:
+        return jsonify({"error": str(e), "trace": traceback.format_exc()})
+
 def health():
     import spacy
     models = spacy.util.get_installed_models()
