@@ -26,13 +26,16 @@ def debug_upload_test():
     import traceback
     try:
         from extractor import extract_graph
-        import os
-        # test with any existing pdf
-        uploads = os.listdir(UPLOAD_FOLDER)
-        pdfs = [f for f in uploads if f.lower().endswith('.pdf')]
+        # use /tmp if no uploads folder
+        test_dirs = ["/tmp/uploads", os.path.join(os.path.dirname(__file__), "uploads")]
+        pdfs = []
+        for d in test_dirs:
+            if os.path.exists(d):
+                pdfs = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith('.pdf')]
+                if pdfs: break
         if not pdfs:
-            return jsonify({"error": "no pdfs in uploads folder"})
-        result = extract_graph(os.path.join(UPLOAD_FOLDER, pdfs[0]))
+            return jsonify({"error": "no pdfs found", "checked": test_dirs})
+        result = extract_graph(pdfs[0])
         return jsonify({"ok": True, "file": pdfs[0], "stats": result["stats"]})
     except Exception as e:
         return jsonify({"error": str(e), "trace": traceback.format_exc()})
@@ -254,7 +257,9 @@ def upload():
         return jsonify({"graph": db_to_vis(), "stats": result["stats"], "method": method})
     except Exception as ex:
         import traceback
-        return jsonify({"error": str(ex), "trace": traceback.format_exc()}), 500
+        tb = traceback.format_exc()
+        print(f"UPLOAD ERROR: {ex}\n{tb}")
+        return jsonify({"error": str(ex), "trace": tb}), 500
 
 if __name__ == "__main__":
     app.run(debug=False, port=5000)
