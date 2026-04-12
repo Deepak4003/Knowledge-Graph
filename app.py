@@ -37,6 +37,7 @@ def debug_upload_test():
     except Exception as e:
         return jsonify({"error": str(e), "trace": traceback.format_exc()})
 
+@app.route("/health")
 def health():
     import spacy
     models = spacy.util.get_installed_models()
