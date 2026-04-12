@@ -28,6 +28,7 @@ def health():
     return jsonify({"status": "ok", "spacy_models": list(models)})
 
 @app.route("/")
+def index():
     return render_template("index.html")
 
 @app.route("/graph", methods=["GET"])
