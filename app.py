@@ -11,7 +11,7 @@ from database import (
 )
 
 app = Flask(__name__)
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
+UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "/tmp/uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 
@@ -237,7 +237,7 @@ def upload():
     file = request.files["pdf"]
     if not file.filename.lower().endswith(".pdf"):
         return jsonify({"error": "PDF only"}), 400
-    path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
+    path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename) or "upload.pdf")
     file.save(path)
     try:
         from ai_extractor import extract_graph_ai
