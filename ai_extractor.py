@@ -88,9 +88,11 @@ def _parse_llm_response(raw):
 
 def extract_graph_ai(pdf_path):
     if not GROQ_API_KEY or GROQ_API_KEY == "your_groq_api_key_here":
-        # fallback to spaCy
         from extractor import extract_graph
-        return extract_graph(pdf_path)
+        try:
+            return extract_graph(pdf_path)
+        except Exception as e:
+            raise RuntimeError(f"spaCy extraction failed: {e}")
 
     text = _extract_text(pdf_path)
     if not text.strip():

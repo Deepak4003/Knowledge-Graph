@@ -12,7 +12,12 @@ except OSError:
     try:
         nlp = spacy.load("en_core_web_md")
     except OSError:
-        nlp = spacy.load("en_core_web_sm")
+        try:
+            nlp = spacy.load("en_core_web_sm")
+        except OSError:
+            import subprocess, sys
+            subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"], check=True)
+            nlp = spacy.load("en_core_web_sm")
 
 NER_TYPE_MAP = {
     "PERSON":"Person","ORG":"Organization","GPE":"Location","LOC":"Location",
