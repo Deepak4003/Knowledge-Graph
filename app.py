@@ -101,6 +101,72 @@ def ask():
     result = answer_question(question, load_db())
     return jsonify(result)
 
+@app.route("/swrl/apply", methods=["POST"])
+def swrl_apply():
+    data  = request.get_json()
+    rules = data.get("rules", [])
+    if not rules:
+        return jsonify({"error": "No rules provided"}), 400
+    db       = load_db()
+    nodes    = db["nodes"]
+    edges    = db["edges"]
+    inferred = []
+
+    def get_vals(nid, prop):
+        """Return values for a property: edges where from=nid and label=prop"""
+        return [e["to"] for e in edges if e["from"] == nid and e["label"] == prop]
+
+    def node_has_type(nid, t):
+        return nodes.get(nid, {}).get("type","").lower() == t.lower() or \
+               nodes.get(nid, {}).get("label","").lower() == t.lower()
+
+    import re as _re
+    for rule in rules:
+        rule = rule.strip()
+        if not rule: continue
+        sep = "→" if "→" in rule else "->"
+        body_str, head_str = rule.split(sep, 1)
+        # parse atoms like Pred(?x,?y) or Type(?x)
+        def parse_atoms(s):
+            return _re.findall(r'(\w+)\(([^)]+)\)', s)
+        body_atoms = parse_atoms(body_str)
+        head_atoms = parse_atoms(head_str)
+        if not head_atoms: continue
+
+        # simple forward-chain over all node pairs
+        for nid in list(nodes.keys()):
+            bindings = {"?x": nid}
+            satisfied = True
+            for pred, args in body_atoms:
+                arg_list = [a.strip() for a in args.split(",")]
+                if len(arg_list) == 1:
+                    # type check
+                    var = arg_list[0]
+                    bound = bindings.get(var, var)
+                    if not node_has_type(bound, pred):
+                        satisfied = False; break
+                elif len(arg_list) == 2:
+                    v1, v2 = arg_list
+                    b1 = bindings.get(v1, v1)
+                    targets = get_vals(b1, pred)
+                    if not targets:
+                        satisfied = False; break
+                    if v2 not in bindings:
+                        bindings[v2] = targets[0]
+                    elif bindings[v2] not in targets:
+                        satisfied = False; break
+            if not satisfied: continue
+            for pred, args in head_atoms:
+                arg_list = [a.strip() for a in args.split(",")]
+                if len(arg_list) == 2:
+                    s = bindings.get(arg_list[0], arg_list[0])
+                    o = bindings.get(arg_list[1], arg_list[1])
+                    if s in nodes and o in nodes and not edge_key_exists(s, o, pred):
+                        insert_edge(next_edge_id(), s, o, pred, {})
+                        inferred.append({"subject": nodes[s]["label"], "predicate": pred, "object": nodes[o]["label"]})
+
+    return jsonify({"graph": db_to_vis(), "inferred": inferred})
+
 @app.route("/clear", methods=["POST"])
 def clear():
     clear_all()

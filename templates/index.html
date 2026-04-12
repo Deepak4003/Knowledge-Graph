@@ -286,7 +286,7 @@ header{box-shadow:0 2px 24px #00000050;background:linear-gradient(90deg,var(--pa
       <div class="tab active" onclick="switchTab('create')" title="Create Nodes & Edges">＋<span class="tab-label">Create</span></div>
       <div class="tab" onclick="switchTab('nodes')" title="Browse Nodes">◉<span class="tab-label">Nodes</span></div>
       <div class="tab" onclick="switchTab('query')" title="Cypher Query">⌕<span class="tab-label">Query</span></div>
-      <div class="tab" onclick="switchTab('ask')" title="Ask AI">🤖<span class="tab-label">AI</span></div>
+      <div class="tab" onclick="switchTab('swrl')" title="SWRL Rules">⚡<span class="tab-label">SWRL</span></div>
       <div class="tab" onclick="switchTab('pdf')" title="Import PDF">📄<span class="tab-label">PDF</span></div>
       <div class="tab" onclick="switchTab('owl')" title="OWL Editor">🦉<span class="tab-label">OWL</span></div>
     </div>
@@ -362,50 +362,47 @@ header{box-shadow:0 2px 24px #00000050;background:linear-gradient(90deg,var(--pa
       </div>
     </div>
 
-    <!-- AI QUERY TAB -->
-    <div class="tab-pane" id="tab-ask">
+    <!-- SWRL TAB -->
+    <div class="tab-pane" id="tab-swrl">
       <div class="pane-scroll">
+
         <div class="card">
-          <div class="card-title">🤖 Ask AI about your Graph</div>
-          <textarea id="ai-question"
-            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
-                   padding:9px;font-size:.8rem;color:var(--text);line-height:1.6;
-                   resize:vertical;min-height:70px;outline:none;margin-bottom:8px"
-            placeholder="e.g. Who are the key researchers in this paper?&#10;What methods were proposed?&#10;How is BERT related to transformers?"
-            onkeydown="if(event.ctrlKey&&event.key==='Enter')askAI()"></textarea>
-          <button class="btn btn-accent btn-full" onclick="askAI()">
-            🤖 Ask  <span style="opacity:.6;font-size:.68rem">Ctrl+Enter</span>
-          </button>
-        </div>
-
-        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:2px">
-          <span class="owl-chip" onclick="setAIQ('Who are the main people or researchers mentioned?')">👤 People</span>
-          <span class="owl-chip" onclick="setAIQ('What organizations or institutions are involved?')">🏢 Orgs</span>
-          <span class="owl-chip" onclick="setAIQ('What methods or techniques are proposed?')">⚙️ Methods</span>
-          <span class="owl-chip" onclick="setAIQ('What datasets were used?')">📊 Datasets</span>
-          <span class="owl-chip" onclick="setAIQ('What are the key findings or results?')">🔍 Findings</span>
-          <span class="owl-chip" onclick="setAIQ('What technologies are mentioned?')">💡 Tech</span>
-        </div>
-
-        <div id="ai-loading" style="display:none;text-align:center;padding:16px;color:var(--muted);font-size:.78rem">
-          <div class="spinner" style="margin:0 auto 8px"></div>
-          Thinking…
-        </div>
-
-        <div id="ai-result" style="display:none">
-          <div class="card" style="border-color:var(--accent)">
-            <div style="font-size:.68rem;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px">
-              🤖 AI Answer <span id="ai-confidence" style="margin-left:6px;opacity:.6"></span>
-            </div>
-            <div id="ai-answer" style="font-size:.82rem;color:var(--text);line-height:1.7"></div>
+          <div class="card-title">⚡ SWRL Rule Editor</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:8px">
+            Write SWRL rules to infer new relationships in your knowledge graph.
           </div>
-          <div id="ai-highlight-info" style="font-size:.72rem;color:var(--muted);margin-top:6px;display:none">
-            <span id="ai-highlight-count"></span> relevant nodes highlighted on graph
-            <button class="btn btn-outline btn-sm" style="margin-left:8px;padding:2px 8px" onclick="clearAIHighlight()">Clear</button>
+          <textarea id="swrl-editor" spellcheck="false"
+            style="width:100%;background:#0a0c16;color:#c8d8ff;
+                   border:1px solid var(--border);border-radius:8px;
+                   padding:10px;font-family:'Cascadia Code','Fira Code',monospace;
+                   font-size:.75rem;line-height:1.65;resize:vertical;
+                   min-height:140px;outline:none;"
+            placeholder="e.g. Person(?x) ^ hasFather(?x,?y) -> hasParent(?x,?y)"></textarea>
+          <div id="swrl-err" style="font-size:.71rem;color:var(--red);display:none;margin-top:4px"></div>
+          <div id="swrl-ok"  style="font-size:.71rem;color:var(--green);display:none;margin-top:4px"></div>
+          <div style="display:flex;gap:7px;margin-top:8px">
+            <button class="btn btn-accent btn-sm" style="flex:1" onclick="swrlValidate()">✔ Validate</button>
+            <button class="btn btn-accent2 btn-sm" style="flex:1" onclick="swrlApply()">⚡ Apply Rules</button>
+            <button class="btn btn-outline btn-sm" onclick="swrlClear()">✕</button>
           </div>
         </div>
 
-        <div id="ai-error" style="display:none;font-size:.75rem;color:var(--red);padding:8px 0"></div>
+        <div style="font-size:.67rem;color:var(--muted);margin-bottom:5px;padding:0 2px">Templates:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;padding:0 2px">
+          <span class="owl-chip" onclick="swrlInsert('Person(?x) ^ hasFather(?x,?y) -> hasParent(?x,?y)')">👤 hasParent</span>
+          <span class="owl-chip" onclick="swrlInsert('Person(?x) ^ hasParent(?x,?y) ^ hasBrother(?y,?z) -> hasUncle(?x,?z)')">👨‍👦 hasUncle</span>
+          <span class="owl-chip" onclick="swrlInsert('Drug(?x) ^ targets(?x,?y) ^ associatedWith(?y,?z) -> mayTreat(?x,?z)')">💊 mayTreat</span>
+          <span class="owl-chip" onclick="swrlInsert('Researcher(?x) ^ worksAt(?x,?y) ^ collaboratesWith(?x,?z) -> sameInstitution(?y,?z)')">🏢 sameInstitution</span>
+          <span class="owl-chip" onclick="swrlInsert('Concept(?x) ^ relatedTo(?x,?y) ^ relatedTo(?y,?z) -> indirectlyRelated(?x,?z)')">🔗 transitiveRelated</span>
+        </div>
+
+        <div id="swrl-result" style="display:none;margin-top:8px">
+          <div class="card" style="border-color:var(--accent2)">
+            <div style="font-size:.68rem;color:var(--accent2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px">⚡ Inferred Triples</div>
+            <div id="swrl-inferred" style="font-size:.78rem;color:var(--text);line-height:1.8;max-height:200px;overflow-y:auto"></div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -447,7 +444,7 @@ header{box-shadow:0 2px 24px #00000050;background:linear-gradient(90deg,var(--pa
           </div>
 
           <!-- file list -->
-          <div id="multi-file-list" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
+          <div id="multi-file-list" style="display:none;margin-top:8px;flex-direction:column;gap:4px"></div>
 
           <div style="display:flex;gap:7px;margin-top:8px">
             <button class="btn btn-accent2 btn-full" id="multi-btn" onclick="uploadMultiPDF()" disabled>
@@ -590,7 +587,7 @@ async function loadGraph(){
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(name){
-  const names=["create","nodes","query","ask","pdf","owl"];
+  const names=["create","nodes","query","swrl","pdf","owl"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
   document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active"));
   document.getElementById("tab-"+name).classList.add("active");
@@ -970,59 +967,66 @@ async function runQuery(){
   }
 }
 
-// ── AI Query ──────────────────────────────────────────────────────────────────
-function setAIQ(q){ document.getElementById("ai-question").value = q; }
+// ── SWRL ──────────────────────────────────────────────────────────────────────
+function swrlInsert(rule){
+  const ed = document.getElementById("swrl-editor");
+  const v = ed.value.trim();
+  ed.value = v ? v + "\n" + rule : rule;
+}
 
-async function askAI(){
-  const question = document.getElementById("ai-question").value.trim();
-  if(!question) return;
+function swrlClear(){
+  document.getElementById("swrl-editor").value = "";
+  document.getElementById("swrl-err").style.display = "none";
+  document.getElementById("swrl-ok").style.display  = "none";
+  document.getElementById("swrl-result").style.display = "none";
+}
 
-  document.getElementById("ai-result").style.display  = "none";
-  document.getElementById("ai-error").style.display   = "none";
-  document.getElementById("ai-loading").style.display = "flex";
-
-  try{
-    const res  = await fetch("/ask",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({question})});
-    const data = await res.json();
-
-    document.getElementById("ai-loading").style.display = "none";
-
-    if(data.error){ 
-      document.getElementById("ai-error").textContent = data.error;
-      document.getElementById("ai-error").style.display = "block";
-      return;
+function swrlValidate(){
+  const rules = document.getElementById("swrl-editor").value.trim().split("\n").filter(r=>r.trim());
+  const errEl = document.getElementById("swrl-err");
+  const okEl  = document.getElementById("swrl-ok");
+  errEl.style.display = "none"; okEl.style.display = "none";
+  if(!rules.length){ errEl.textContent="No rules entered."; errEl.style.display="block"; return false; }
+  const pattern = /^[\w\s,?()^→\->.]+$/;
+  for(const rule of rules){
+    if(!rule.includes("->") && !rule.includes("→")){
+      errEl.textContent = `Missing "->" in: ${rule}`; errEl.style.display="block"; return false;
     }
-
-    document.getElementById("ai-answer").textContent = data.answer;
-    const conf = data.confidence || "medium";
-    document.getElementById("ai-confidence").textContent =
-      conf==="high" ? "✅ High confidence" : conf==="medium" ? "⚠ Medium confidence" : "❓ Low confidence";
-    document.getElementById("ai-result").style.display = "block";
-
-    // highlight relevant nodes on graph
-    const relNodes = data.relevant_node_ids || [];
-    if(relNodes.length > 0 && nodesDS){
-      nodesDS.update(nodesDS.getIds().map(id=>({
-        id, opacity: relNodes.includes(id) ? 1 : 0.12
-      })));
-      // zoom to relevant nodes
-      network.fit({nodes: relNodes, animation: true});
-      document.getElementById("ai-highlight-count").textContent = relNodes.length;
-      document.getElementById("ai-highlight-info").style.display = "block";
+    const parts = rule.includes("→") ? rule.split("→") : rule.split("->");
+    if(parts.length !== 2 || !parts[0].trim() || !parts[1].trim()){
+      errEl.textContent = `Invalid rule format: ${rule}`; errEl.style.display="block"; return false;
     }
-
-  }catch(e){
-    document.getElementById("ai-loading").style.display = "none";
-    document.getElementById("ai-error").textContent = "Request failed: " + e.message;
-    document.getElementById("ai-error").style.display = "block";
   }
+  okEl.textContent = `✔ ${rules.length} rule(s) valid`; okEl.style.display="block"; return true;
 }
 
-function clearAIHighlight(){
-  if(nodesDS) nodesDS.update(nodesDS.getIds().map(id=>({id, opacity:1})));
-  document.getElementById("ai-highlight-info").style.display = "none";
+async function swrlApply(){
+  if(!swrlValidate()) return;
+  const rules = document.getElementById("swrl-editor").value.trim().split("\n").filter(r=>r.trim());
+  setLoading(true, "Applying SWRL rules…");
+  try{
+    const res  = await fetch("/swrl/apply", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({rules})});
+    const data = await res.json();
+    setLoading(false);
+    if(data.error){ toast(data.error,"err"); return; }
+    renderGraph(data.graph);
+    const inf = data.inferred || [];
+    const resultEl = document.getElementById("swrl-result");
+    const infEl    = document.getElementById("swrl-inferred");
+    if(inf.length){
+      infEl.innerHTML = inf.map(t=>`<div style="padding:2px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--accent)">${esc(t.subject)}</span>
+        <span style="color:var(--muted);margin:0 4px">${esc(t.predicate)}</span>
+        <span style="color:var(--accent2)">${esc(t.object)}</span>
+      </div>`).join("");
+      resultEl.style.display = "block";
+      toast(`SWRL: ${inf.length} triple(s) inferred`, "ok");
+    } else {
+      toast("Rules applied — no new triples inferred", "ok");
+    }
+  }catch(e){ setLoading(false); toast("SWRL failed: "+e.message,"err"); }
 }
+
 
 // ── PDF ───────────────────────────────────────────────────────────────────────
 function onFileSelect(e){ setFile(e.target.files[0]); }

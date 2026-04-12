@@ -30,6 +30,8 @@ def _safe_id(text):
     return s[:60]
 
 def _clean(t):
+    # remove (cid:xxx) font encoding artifacts
+    t = re.sub(r"\(cid:\d+\)", " ", t)
     return re.sub(r"\s+", " ", t).strip()
 
 def extract_graph(pdf_path):
@@ -38,8 +40,13 @@ def extract_graph(pdf_path):
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             t = page.extract_text()
-            if t: pages.append(t)
+            if t:
+                t = re.sub(r"\(cid:\d+\)", " ", t)  # fix font encoding artifacts
+                pages.append(t)
     text = "\n".join(pages)[:80_000]
+
+    if not text.strip():
+        return {"nodes": [], "edges": [], "stats": {"nodes": 0, "edges": 0, "error": "No text could be extracted from this PDF. It may be image-based."}}
 
     doc       = nlp(text)
     ent_types = {_clean(e.text): NER_TYPE_MAP.get(e.label_, "Concept") for e in doc.ents if len(_clean(e.text)) > 1}
@@ -81,7 +88,7 @@ def extract_graph(pdf_path):
                 add_edge(ents[i], "related_to", ents[i+1])
 
     # cap
-    edge_list = edges[:400]
+    edge_list = edges[:800]
     # keep only nodes referenced by edges
     used = {e["from"] for e in edge_list} | {e["to"] for e in edge_list}
     node_list = [n for n in nodes.values() if n["id"] in used]
