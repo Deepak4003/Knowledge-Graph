@@ -262,4 +262,5 @@ def upload():
         return jsonify({"error": str(ex), "trace": tb}), 500
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5000)
+    port = int(os.environ.get("PORT", 7860))
+    app.run(debug=False, host="0.0.0.0", port=port)

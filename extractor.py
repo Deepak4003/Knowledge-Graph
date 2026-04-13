@@ -12,11 +12,16 @@ def get_nlp():
     global _nlp
     if _nlp is None:
         try:
-            _nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            import subprocess, sys
-            subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"], check=True)
-            _nlp = spacy.load("en_core_web_sm")
+            # disable unused components to save memory and speed up
+            _nlp = spacy.load("en_core_web_sm", disable=["parser", "lemmatizer"])
+            _nlp.enable_pipe("senter")  # use sentence recognizer instead of parser
+        except Exception:
+            try:
+                _nlp = spacy.load("en_core_web_sm", disable=["lemmatizer"])
+            except OSError:
+                import subprocess, sys
+                subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"], check=True)
+                _nlp = spacy.load("en_core_web_sm", disable=["lemmatizer"])
     return _nlp
 
 NER_TYPE_MAP = {
@@ -48,7 +53,7 @@ def extract_graph(pdf_path):
             if t:
                 t = re.sub(r"\(cid:\d+\)", " ", t)  # fix font encoding artifacts
                 pages.append(t)
-    text = "\n".join(pages)[:50_000]  # limit to 50k chars on server
+    text = "\n".join(pages)[:30_000]  # limit to 30k chars on server
 
     if not text.strip():
         return {"nodes": [], "edges": [], "stats": {"nodes": 0, "edges": 0, "error": "No text could be extracted from this PDF. It may be image-based."}}
