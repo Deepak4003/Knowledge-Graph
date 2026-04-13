@@ -21,7 +21,13 @@ migrate_json_if_needed()
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
-@app.route("/debug/upload-test", methods=["GET"])
+_last_error = {}
+
+@app.route("/debug/last-error")
+def last_error():
+    return jsonify(_last_error)
+
+
 def debug_upload_test():
     import traceback
     try:
@@ -60,9 +66,7 @@ def debug_file_info():
 
 @app.route("/health")
 def health():
-    import spacy
-    models = spacy.util.get_installed_models()
-    return jsonify({"status": "ok", "spacy_models": list(models)})
+    return jsonify({"status": "ok", "extractor": "regex"})
 
 @app.route("/")
 def index():
@@ -276,6 +280,7 @@ def upload():
     except Exception as ex:
         import traceback
         tb = traceback.format_exc()
+        _last_error.update({"error": str(ex), "trace": tb})
         print(f"UPLOAD ERROR: {ex}\n{tb}")
         return jsonify({"error": str(ex), "trace": tb}), 500
 
