@@ -41,13 +41,13 @@ PATTERNS = {
 def extract_graph(pdf_path):
     pages = []
     with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages[:20]:  # max 20 pages
+        for page in pdf.pages[:10]:  # max 10 pages
             t = page.extract_text()
             if t:
                 t = re.sub(r"\(cid:\d+\)", " ", t)
                 pages.append(t)
 
-    text = "\n".join(pages)[:40_000]
+    text = "\n".join(pages)[:20_000]
 
     if not text.strip():
         return {"nodes": [], "edges": [], "stats": {"nodes": 0, "edges": 0}}

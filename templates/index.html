@@ -1038,6 +1038,10 @@ function onDrop(e){
   if(f&&f.name.toLowerCase().endsWith(".pdf")) setFile(f);
 }
 function setFile(f){
+  if(f.size > 5 * 1024 * 1024){
+    toast("File too large for cloud. Max 5MB. Use localhost for larger files.","err");
+    return;
+  }
   selectedFile=f;
   document.getElementById("uz-file").textContent=f.name;
   document.getElementById("pdf-btn").disabled=false;
