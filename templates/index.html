@@ -1051,7 +1051,7 @@ async function uploadPDF(){
   try{
     const res  = await fetch("/upload",{method:"POST",body:form});
     const data = await res.json();
-    if(data.error){ toast(data.error,"err"); return; }
+    if(data.error){ toast(data.error + (data.trace ? '\n'+data.trace.split('\n').slice(-3).join('\n') : ''),"err"); return; }
     setLoading(false);
     renderGraph(data.graph);
     const r=document.getElementById("pdf-result");

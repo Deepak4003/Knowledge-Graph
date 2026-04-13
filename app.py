@@ -26,7 +26,6 @@ def debug_upload_test():
     import traceback
     try:
         from extractor import extract_graph
-        # use /tmp if no uploads folder
         test_dirs = ["/tmp/uploads", os.path.join(os.path.dirname(__file__), "uploads")]
         pdfs = []
         for d in test_dirs:
@@ -37,6 +36,25 @@ def debug_upload_test():
             return jsonify({"error": "no pdfs found", "checked": test_dirs})
         result = extract_graph(pdfs[0])
         return jsonify({"ok": True, "file": pdfs[0], "stats": result["stats"]})
+    except Exception as e:
+        return jsonify({"error": str(e), "trace": traceback.format_exc()})
+
+@app.route("/debug/file-info", methods=["POST"])
+def debug_file_info():
+    import traceback
+    try:
+        if "pdf" not in request.files:
+            return jsonify({"error": "no pdf field", "fields": list(request.files.keys())})
+        f = request.files["pdf"]
+        fname = secure_filename(f.filename) or "upload.pdf"
+        path = f"/tmp/uploads/{fname}"
+        os.makedirs("/tmp/uploads", exist_ok=True)
+        f.save(path)
+        size = os.path.getsize(path)
+        # now try extraction
+        from extractor import extract_graph
+        result = extract_graph(path)
+        return jsonify({"ok": True, "filename": fname, "size": size, "stats": result["stats"]})
     except Exception as e:
         return jsonify({"error": str(e), "trace": traceback.format_exc()})
 
