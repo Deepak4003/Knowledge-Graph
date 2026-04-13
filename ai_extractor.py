@@ -92,7 +92,7 @@ def extract_graph_ai(pdf_path):
         try:
             return extract_graph(pdf_path)
         except Exception as e:
-            raise RuntimeError(f"spaCy extraction failed: {e}")
+            raise RuntimeError(f"Extraction failed: {e}")
 
     text = _extract_text(pdf_path)
     if not text.strip():
