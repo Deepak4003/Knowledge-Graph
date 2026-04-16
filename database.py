@@ -23,7 +23,7 @@ def get_db():
             _client = MongoClient(
                 MONGO_URI,
                 serverSelectionTimeoutMS=10000,
-                tlsInsecure=True,
+                tlsAllowInvalidCertificates=True,
             )
             # force connection test
             _client.admin.command("ping")

@@ -28,6 +28,7 @@ def last_error():
     return jsonify(_last_error)
 
 
+@app.route("/debug/upload-test", methods=["GET"])
 def debug_upload_test():
     import traceback
     try:
@@ -66,7 +67,8 @@ def debug_file_info():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "extractor": "regex"})
+    from extractor import _use_spacy
+    return jsonify({"status": "ok", "extractor": "spacy" if _use_spacy else "regex", "db": "mongodb" if __import__('database')._use_mongo else "sqlite"})
 
 @app.route("/")
 def index():
