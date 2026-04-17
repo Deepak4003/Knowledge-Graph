@@ -130,8 +130,8 @@ def extract_graph_ai(pdf_path):
             print(f"[AI extractor] chunk {i+1} error: {e}")
             continue
 
-    # if too many errors, fallback
-    if errors == len(chunks):
+    # if too many errors or no results, fallback to spaCy
+    if errors == len(chunks) or (len(all_entities) == 0 and len(all_relations) == 0):
         from extractor import extract_graph
         result = extract_graph(pdf_path)
         result["method"] = "spacy_fallback"

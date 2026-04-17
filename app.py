@@ -140,16 +140,6 @@ def query():
     result = run_query(q, load_db())
     return jsonify(result)
 
-@app.route("/ask", methods=["POST"])
-def ask():
-    from nl_query import answer_question
-    data     = request.get_json()
-    question = data.get("question", "").strip()
-    if not question:
-        return jsonify({"error": "Question required"}), 400
-    result = answer_question(question, load_db())
-    return jsonify(result)
-
 @app.route("/swrl/apply", methods=["POST"])
 def swrl_apply():
     data  = request.get_json()
