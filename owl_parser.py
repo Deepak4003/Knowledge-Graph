@@ -15,9 +15,13 @@ def _local(uri):
     """Extract local name from URI or prefixed name."""
     if not uri:
         return ""
+    # Handle ElementTree tag format: {namespace}localname
+    if uri.startswith("{") and "}" in uri:
+        return uri.split("}", 1)[1]
     for sep in ["#", "/"]:
         if sep in uri:
             return uri.rsplit(sep, 1)[-1]
+    return uri
     return uri
 
 def validate_owl(text):
